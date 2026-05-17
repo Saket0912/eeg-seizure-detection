@@ -2,19 +2,7 @@
 """
 EEG Seizure Detection — Main Entry Point
 =========================================
-Runs the complete pipeline:
-  1. Load & preprocess data
-  2. Apply Butterworth + Wavelet filter (best SNR)
-  3. Train all six models
-  4. Evaluate and compare performance
-  5. EWC fine-tuning of GoogLeNet on Dataset 2
-  6. Save all result plots to results/
-
-Usage
------
-    python main.py
-    python main.py --model googlenet --epochs 10
-    python main.py --preprocess_only
+Runs the complete pipeline on the 'Epileptic Seizure Recognition' dataset.
 """
 
 import argparse
@@ -23,6 +11,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 from src.models.alexnet import build_eeg_alexnet
 from src.models.densenet import build_eeg_densenet
@@ -39,12 +28,11 @@ from src.utils.visualization import (
     plot_filtered_eeg,
     plot_model_comparison,
     plot_raw_eeg,
-    plot_snr_comparison,
     plot_training_curves,
 )
 
-
 def parse_args() -> argparse.Namespace:
+    # ... (No changes in this function)
     parser = argparse.ArgumentParser(
         description="EEG Seizure Detection Pipeline"
     )
@@ -63,69 +51,67 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_and_preprocess(data_dir: str):
-    """Load CSVs, clean, filter, and split into (X, y) pairs."""
+    """Load, clean, filter, and binarize the dataset."""
     print("\n[1/5] Loading datasets …")
-    
-    df1_path = os.path.join(data_dir, "EEG_Dataset-1.csv")
-    df2_path = os.path.join(data_dir, "EEG_Dataset-2.csv")
-    
-    if not os.path.exists(df1_path) or not os.path.exists(df2_path):
-        print(f"[!] Warning: Dataset files not found in {data_dir}")
-        print("[!] Creating synthetic data for demonstration...")
-        
-        np.random.seed(42)
-        n_samples = 1000
-        n_features = 178
-        
-        X1 = np.random.randn(n_samples, n_features)
-        y1 = np.random.randint(0, 2, n_samples)
-        
-        X2 = np.random.randn(n_samples, n_features)
-        y2 = np.random.randint(0, 2, n_samples)
-        
-        return X1, X2, y1, y2, None, X1
-    
-    df1 = pd.read_csv(df1_path)
-    df2 = pd.read_csv(df2_path)
 
-    for df in (df1, df2):
-        df.dropna(inplace=True)
+    ### CHANGED ### - Updated filename
+    data_path = os.path.join(data_dir, "Epileptic Seizure Recognition.csv")
 
-    df1 = df1.iloc[:, 1:]
-    df2 = df2.iloc[:, 1:]
+    if not os.path.exists(data_path):
+        print(f"[!] Warning: Dataset file not found at {data_path}")
+        print("[!] Exiting. Please place the dataset in the 'data/' folder.")
+        sys.exit(1)
 
-    X1_raw = df1.iloc[:, :-1].values.astype(float)
-    X2_raw = df2.iloc[:, :-1].values.astype(float)
-    y1 = df1.iloc[:, -1].values
-    y2 = df2.iloc[:, -1].values
+    df = pd.read_csv(data_path)
+    df.dropna(inplace=True)
+
+    ### CHANGED ### - Handle the first column which might be patient ID
+    if df.columns[0] == 'Unnamed: 0':
+        df = df.iloc[:, 1:]
+    
+    # Check if the first column is still non-numeric (like 'X21.V1.791')
+    if not pd.api.types.is_numeric_dtype(df.iloc[:, 0]):
+         df = df.iloc[:, 1:]
+
+
+    X_raw = df.iloc[:, :-1].values.astype(float)
+    y = df.iloc[:, -1].values
 
     print("[2/5] Comparing filter SNRs …")
-    compare_all_filters(X1_raw)
+    # This step is optional but good for verification
+    if X_raw.shape[0] > 5000: # Use a subset for faster SNR comparison
+        compare_all_filters(X_raw[:5000])
+    else:
+        compare_all_filters(X_raw)
+
 
     print("[3/5] Applying Butterworth + Wavelet filter …")
-    X1_filt = apply_butterworth_wavelet_filter(X1_raw)
-    X2_filt = apply_butterworth_wavelet_filter(X2_raw)
+    X_filt = apply_butterworth_wavelet_filter(X_raw)
 
-    y1 = np.where(y1 > 1, 0, y1)
-    y2 = np.where(y2 > 1, 0, y2)
+    ### CHANGED ### - Updated label binarization logic
+    # In this dataset, y=1 is seizure, y=2,3,4,5 are non-seizure.
+    # We map y=1 to class 1, and everything else to class 0.
+    y_binarized = np.where(y == 1, 1, 0)
 
-    return X1_filt, X2_filt, y1, y2, df1, X1_raw
+    # Return only one dataset's processed data
+    return X_filt, y_binarized, df, X_raw
 
 
 def main() -> None:
     args = parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
 
-    X1, X2, y1, y2, df1_raw, X1_raw = load_and_preprocess(args.data_dir)
+    # ### CHANGED ### - Simplified to handle one dataset
+    X, y, df_raw, X_raw = load_and_preprocess(args.data_dir)
 
-    if df1_raw is not None:
-        df1_raw_df = pd.DataFrame(
-            X1_raw, columns=[f"X{i}" for i in range(1, X1_raw.shape[1] + 1)]
+    if df_raw is not None:
+        df_raw_df = pd.DataFrame(
+            X_raw, columns=[f"X{i}" for i in range(1, X_raw.shape[1] + 1)]
         )
         filtered_df = pd.DataFrame(
-            X1, columns=[f"X{i}" for i in range(1, X1.shape[1] + 1)]
+            X, columns=[f"X{i}" for i in range(1, X.shape[1] + 1)]
         )
-        plot_raw_eeg(df1_raw_df, title="Raw EEG Signals",
+        plot_raw_eeg(df_raw_df, title="Raw EEG Signals",
                      save_path=f"{args.output_dir}/raw_eeg.png")
         plot_filtered_eeg(filtered_df, title="Filtered EEG Signals",
                           save_path=f"{args.output_dir}/filtered_eeg.png")
@@ -136,13 +122,11 @@ def main() -> None:
 
     print("\n[4/5] Training models …\n")
 
-    from sklearn.model_selection import train_test_split
-    
     X_tr, X_tmp, y_tr, y_tmp = train_test_split(
-        X1, y1, test_size=0.2, random_state=42
+        X, y, test_size=0.2, random_state=42, stratify=y # stratify is good practice
     )
     X_val, X_te, y_val, y_te = train_test_split(
-        X_tmp, y_tmp, test_size=0.5, random_state=42
+        X_tmp, y_tmp, test_size=0.5, random_state=42, stratify=y_tmp
     )
 
     X_tr3  = np.expand_dims(X_tr,  -1)
@@ -151,6 +135,7 @@ def main() -> None:
 
     results = {}
 
+    # The rest of the main function (model training loops) remains unchanged...
     if args.model in ("all", "alexnet"):
         print("  Training AlexNet...")
         m = build_eeg_alexnet()
