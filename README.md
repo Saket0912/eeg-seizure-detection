@@ -304,7 +304,7 @@ This project is licensed under the MIT License — see [LICENSE](LICENSE) for de
 <div align="center">
 Saket Verma
 
-[LinkedIn]() • [GitHub](https://github.com/saket-verma-3b337a1a7) • [Email](mailto:)
+[LinkedIn](https://www.linkedin.com/in/saket-verma-3b337a1a7/) • [GitHub](https://github.com/saket-verma-3b337a1a7) • [Email](mailto:saketverma1911@gmail.com)
 
 If this project helped you, please consider giving it a ⭐!
 
