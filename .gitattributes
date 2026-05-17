@@ -1,0 +1,20 @@
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Explicitly declare source code files
+*.py text diff=python
+*.ipynb text
+*.md text
+*.txt text
+*.yml text
+*.yaml text
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.h5 binary
+*.keras binary
+*.pkl binary
+*.csv binary
