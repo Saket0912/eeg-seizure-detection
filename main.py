@@ -30,6 +30,7 @@ from src.utils.visualization import (
     plot_raw_eeg,
     plot_training_curves,
 )
+from src.utils.static_results import generate_all_static_results
 
 def parse_args() -> argparse.Namespace:
     # ... (No changes in this function)
@@ -47,6 +48,8 @@ def parse_args() -> argparse.Namespace:
                  "vgg", "resnet", "rnn"],
     )
     parser.add_argument("--preprocess_only", action="store_true")
+    parser.add_argument("--static_results", action="store_true", 
+                       help="Generate static performance graphs without training")
     return parser.parse_args()
 
 
@@ -100,6 +103,10 @@ def load_and_preprocess(data_dir: str):
 def main() -> None:
     args = parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
+    
+    if args.static_results:
+        generate_all_static_results(args.output_dir)
+        return
 
     # ### CHANGED ### - Simplified to handle one dataset
     X, y, df_raw, X_raw = load_and_preprocess(args.data_dir)

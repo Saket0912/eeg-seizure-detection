@@ -67,26 +67,39 @@ def plot_snr_comparison(
     save_path: Optional[str] = None,
 ) -> None:
     """Bar chart comparing SNR across different filter pipelines."""
-    colors = ["#5DADE2", "#E74C3C", "#58D68D", "#F4D03F", "#EC7063"]
-    fig, ax = plt.subplots(figsize=(10, 5))
-
-    bars = ax.bar(filter_names, snr_values, color=colors[: len(filter_names)],
-                  edgecolor="black", linewidth=0.8)
-
-    ax.bar_label(bars, fmt="%.2f dB", padding=3, fontsize=9)
-    ax.set_xlabel("Filter Pipeline", fontsize=12)
-    ax.set_ylabel("SNR (dB)", fontsize=12)
-    ax.set_title("Signal-to-Noise Ratio Comparison Across Filter Pipelines",
-                  fontsize=13, fontweight="bold")
-    ax.set_ylim(0, max(snr_values) * 1.2)
-    ax.grid(axis="y", linestyle="--", alpha=0.6)
-    plt.xticks(rotation=25, ha="right")
+    
+    colors = ['#A8DADC', '#F4A261', '#A7C957', '#E9C46A', '#E76F51']
+    
+    fig, ax = plt.subplots(figsize=(12, 7))
+    
+    bars = ax.bar(filter_names, snr_values, color=colors,
+                  edgecolor='black', linewidth=1.5, alpha=0.95)
+    
+    # Add value labels
+    for bar, snr in zip(bars, snr_values):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + 0.5,
+               f'{snr:.2f} dB', ha='center', va='bottom',
+               fontsize=11, fontweight='bold')
+    
+    ax.set_xlabel('Filter Pipeline', fontsize=13, fontweight='bold')
+    ax.set_ylabel('Signal-to-Noise Ratio (SNR) [dB]', fontsize=13, fontweight='bold')
+    ax.set_title('EEG Signal Preprocessing - Filter SNR Comparison',
+                  fontsize=15, fontweight='bold', pad=20)
+    ax.set_ylim(0, max(snr_values) * 1.15)
+    ax.grid(axis='y', linestyle='--', alpha=0.4, linewidth=0.8)
+    plt.xticks(rotation=30, ha='right', fontsize=11)
+    
+    # Highlight best filter
+    best_idx = np.argmax(snr_values)
+    bars[best_idx].set_edgecolor('red')
+    bars[best_idx].set_linewidth(3)
+    bars[best_idx].set_alpha(1.0)
+    
     plt.tight_layout()
-
     if save_path:
-        plt.savefig(save_path, dpi=150)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight', facecolor='white')
     plt.show()
-
 
 def plot_training_curves(
     history,
@@ -126,31 +139,43 @@ def plot_model_comparison(
     save_path: Optional[str] = None,
 ) -> None:
     """Grouped bar chart comparing all models across four metrics."""
+    
+    # Professional color palette
+    colors = ['#2E86AB', '#F6BD60', '#F77D0B', '#8338EC', '#3A86FF', '#FB5607']
+    
     metric_names = list(metrics.keys())
     n_metrics = len(metric_names)
     n_models = len(model_names)
-    bar_width = 0.12
+    bar_width = 0.14
+    
+    fig, ax = plt.subplots(figsize=(14, 7))
     index = np.arange(n_metrics)
-
-    fig, ax = plt.subplots(figsize=(11, 5))
-    colors = plt.cm.Set2(np.linspace(0, 1, n_models))
-
+    
     for i, (model, color) in enumerate(zip(model_names, colors)):
         values = [metrics[m][i] for m in metric_names]
-        ax.bar(index + i * bar_width, values, bar_width,
-               label=model, color=color, edgecolor="black", linewidth=0.6)
-
-    ax.set_xlabel("Metric", fontsize=12)
-    ax.set_ylabel("Score", fontsize=12)
-    ax.set_title("Performance Comparison Across All Models",
-                  fontsize=13, fontweight="bold")
+        bars = ax.bar(index + i * bar_width, values, bar_width,
+               label=model, color=color, edgecolor='black', linewidth=1.2,
+               alpha=0.95)
+        
+        # Add value labels on bars
+        for bar, val in zip(bars, values):
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2., height + 0.02,
+                   f'{val:.2f}', ha='center', va='bottom',
+                   fontsize=9, fontweight='bold', rotation=0)
+    
+    ax.set_xlabel('Performance Metrics', fontsize=13, fontweight='bold')
+    ax.set_ylabel('Scores', fontsize=13, fontweight='bold')
+    ax.set_title('EEG Seizure Detection - Model Performance Comparison',
+                  fontsize=15, fontweight='bold', pad=20)
     ax.set_xticks(index + bar_width * (n_models - 1) / 2)
-    ax.set_xticklabels(metric_names)
-    ax.set_ylim(0, 1.15)
-    ax.legend(loc="lower right", framealpha=0.9)
-    ax.grid(axis="y", linestyle="--", alpha=0.5)
-
+    ax.set_xticklabels(metric_names, fontsize=12, fontweight='bold')
+    ax.set_ylim(0, 1.10)
+    ax.legend(loc='lower right', framealpha=0.95, fontsize=11)  # ✅ Removed framestyle
+    ax.grid(axis='y', linestyle='--', alpha=0.4, linewidth=0.8)
+    ax.axhline(y=0.95, color='green', linestyle=':', alpha=0.6, linewidth=2, label='95% Threshold')
+    
     plt.tight_layout()
     if save_path:
-        plt.savefig(save_path, dpi=150)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight', facecolor='white')
     plt.show()
